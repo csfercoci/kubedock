@@ -166,6 +166,9 @@ func getContainerCreateRequest(c *gin.Context, cr *common.ContextRouter) (*Conta
 		in.Labels[types.LabelRequestCPU] = fmt.Sprintf("%dn", in.HostConfig.NanoCpus)
 	}
 	in.Labels[types.LabelServiceAccount] = cr.Config.ServiceAccount
+	if _, ok := in.Labels[types.LabelSecurityContext]; !ok && cr.Config.SecurityContext != "" {
+		in.Labels[types.LabelSecurityContext] = cr.Config.SecurityContext
+	}
 	return in, nil
 }
 

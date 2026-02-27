@@ -65,6 +65,10 @@ func init() {
 	serverCmd.PersistentFlags().Bool("pre-archive", false, "Enable support for copying single files to containers without starting them")
 	serverCmd.PersistentFlags().Bool("disable-services", false, "Disable service creation (requires a network solution such as kubedock-dns)")
 	serverCmd.PersistentFlags().Bool("ignore-container-memory", false, "Ignore container memory setting and use requests/limits from gobal settings or container labels")
+	serverCmd.PersistentFlags().String("storage-class", "", "Kubernetes storage class for PVC volumes (empty=cluster default, e.g. gp3-csi for OCP)")
+	serverCmd.PersistentFlags().String("volume-size", "100Mi", "Default PVC volume size (e.g. 100Mi, 1Gi)")
+	serverCmd.PersistentFlags().String("volume-access-mode", "ReadWriteOnce", "PVC access mode: ReadWriteOnce, ReadWriteMany, ReadOnlyMany")
+	serverCmd.PersistentFlags().String("security-context", "", "Security context profile for pods: restricted (OCP 4.18 SCC), baseline, or empty")
 
 	viper.BindPFlag("server.listen-addr", serverCmd.PersistentFlags().Lookup("listen-addr"))
 	viper.BindPFlag("server.socket", serverCmd.PersistentFlags().Lookup("unix-socket"))
@@ -97,6 +101,10 @@ func init() {
 	viper.BindPFlag("pre-archive", serverCmd.PersistentFlags().Lookup("pre-archive"))
 	viper.BindPFlag("disable-services", serverCmd.PersistentFlags().Lookup("disable-services"))
 	viper.BindPFlag("ignore-container-memory", serverCmd.PersistentFlags().Lookup("ignore-container-memory"))
+	viper.BindPFlag("kubernetes.storage-class", serverCmd.PersistentFlags().Lookup("storage-class"))
+	viper.BindPFlag("kubernetes.volume-size", serverCmd.PersistentFlags().Lookup("volume-size"))
+	viper.BindPFlag("kubernetes.volume-access-mode", serverCmd.PersistentFlags().Lookup("volume-access-mode"))
+	viper.BindPFlag("kubernetes.security-context", serverCmd.PersistentFlags().Lookup("security-context"))
 
 	viper.BindEnv("server.listen-addr", "SERVER_LISTEN_ADDR")
 	viper.BindEnv("server.tls-enable", "SERVER_TLS_ENABLE")
@@ -119,6 +127,10 @@ func init() {
 	viper.BindEnv("kubernetes.runas-user", "K8S_RUNAS_USER")
 	viper.BindEnv("kubernetes.timeout", "TIME_OUT")
 	viper.BindEnv("reaper.reapmax", "REAPER_REAPMAX")
+	viper.BindEnv("kubernetes.storage-class", "K8S_STORAGE_CLASS")
+	viper.BindEnv("kubernetes.volume-size", "K8S_VOLUME_SIZE")
+	viper.BindEnv("kubernetes.volume-access-mode", "K8S_VOLUME_ACCESS_MODE")
+	viper.BindEnv("kubernetes.security-context", "K8S_SECURITY_CONTEXT")
 	viper.BindEnv("verbosity", "VERBOSITY")
 
 	serverCmd.PersistentFlags().Lookup("tls-enable").Hidden = true

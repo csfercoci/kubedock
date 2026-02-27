@@ -104,6 +104,9 @@ func (in *instance) startContainer(tainr *types.Container) (DeployState, error) 
 	}
 	container.Resources = reqlimits
 
+	// Apply container-level security context for OCP 4.18 restricted SCC compatibility
+	container.SecurityContext = tainr.GetContainerSecurityContext(container.SecurityContext)
+
 	nodeSel, err := tainr.GetNodeSelector(pod.Spec.NodeSelector)
 	if err != nil {
 		return DeployFailed, err
@@ -134,6 +137,10 @@ func (in *instance) startContainer(tainr *types.Container) (DeployState, error) 
 
 	for _, ps := range in.imagePullSecrets {
 		pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: ps})
+	}
+
+	if len(tainr.NamedVolumes) > 0 {
+		in.addNamedVolumes(tainr, pod, tainr.NamedVolumes)
 	}
 
 	if tainr.HasVolumes() {

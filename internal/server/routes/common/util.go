@@ -12,6 +12,13 @@ import (
 // StartContainer will start given container and saves the appropriate state
 // in the database.
 func StartContainer(cr *ContextRouter, tainr *types.Container) error {
+	tainr.NamedVolumes = map[string]*types.Volume{}
+	for dst, src := range tainr.GetVolumes() {
+		if vol, err := cr.DB.GetVolumeByName(src); err == nil {
+			tainr.NamedVolumes[dst] = vol
+		}
+	}
+
 	state, err := cr.Backend.StartContainer(tainr)
 	if err != nil {
 		return err

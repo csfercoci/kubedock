@@ -29,6 +29,7 @@ type Container struct {
 	Env            []string
 	Binds          []string
 	Mounts         []Mount
+	NamedVolumes   map[string]*Volume
 	PreArchives    []PreArchive
 	HostIP         string
 	ExposedPorts   map[string]interface{}
@@ -85,6 +86,10 @@ const (
 	LabelNodeSelector = "com.joyrex2001.kubedock.node-selector"
 	// LabelActiveDeadlineSeconds is the label to be used to specify active deadline in seconds
 	LabelActiveDeadlineSeconds = "com.joyrex2001.kubedock.active-deadline-seconds"
+	// LabelSecurityContext is the label to control container security context profile.
+	// Supported values: "restricted" (OCP 4.18 restricted SCC compatible),
+	// "baseline" (meet Pod Security Standard baseline), or empty/unset (no extra constraints).
+	LabelSecurityContext = "com.joyrex2001.kubedock.security-context"
 )
 
 // GetEnvVar will return the environment variables of the container
@@ -259,11 +264,19 @@ func (co *Container) GetPodName() string {
 // GetPodSecurityContext will create a security context for the Pod that implements
 // the relevant features of the Docker API. Right now this only covers the ability
 // to specify the numeric user a container should run as.
+// When the "restricted" security context label is set (for OCP 4.18 restricted SCC),
+// it also sets RunAsNonRoot=true, SeccompProfile=RuntimeDefault, and FSGroup.
 func (co *Container) GetPodSecurityContext(context *corev1.PodSecurityContext) (*corev1.PodSecurityContext, error) {
 	user, ok := co.Labels[LabelRunasUser]
 	if !ok || user == "" {
 		if context == nil || context.RunAsUser == nil {
 			klog.Warningf("user not set, will run as user defined in image")
+		}
+		if context == nil {
+			context = &corev1.PodSecurityContext{}
+		}
+		if err := co.applyPodSecurityProfile(context); err != nil {
+			return context, err
 		}
 		return context, nil
 	}
@@ -285,7 +298,73 @@ func (co *Container) GetPodSecurityContext(context *corev1.PodSecurityContext) (
 
 	context.RunAsUser = &parsed
 
+	if err := co.applyPodSecurityProfile(context); err != nil {
+		return context, err
+	}
+
 	return context, nil
+}
+
+// applyPodSecurityProfile applies pod-level security settings based on the
+// LabelSecurityContext label. For "restricted" (OCP 4.18 restricted SCC),
+// it sets RunAsNonRoot, SeccompProfile, and FSGroup.
+func (co *Container) applyPodSecurityProfile(ctx *corev1.PodSecurityContext) error {
+	profile := co.Labels[LabelSecurityContext]
+	switch strings.ToLower(profile) {
+	case "restricted":
+		t := true
+		ctx.RunAsNonRoot = &t
+		ctx.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+		// If no explicit user set and restricted mode, use OCP conventional range start
+		if ctx.RunAsUser == nil {
+			uid := int64(1000)
+			ctx.RunAsUser = &uid
+		}
+		if ctx.FSGroup == nil {
+			gid := int64(0)
+			ctx.FSGroup = &gid
+		}
+	case "baseline":
+		t := true
+		ctx.RunAsNonRoot = &t
+		ctx.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+	}
+	return nil
+}
+
+// GetContainerSecurityContext returns a security context to be applied at the
+// container level. When the "restricted" security context label is set (for
+// OCP 4.18 restricted SCC), it sets allowPrivilegeEscalation=false, drops
+// ALL capabilities, and sets the seccomp profile to RuntimeDefault.
+func (co *Container) GetContainerSecurityContext(existing *corev1.SecurityContext) *corev1.SecurityContext {
+	profile := co.Labels[LabelSecurityContext]
+	if existing == nil {
+		existing = &corev1.SecurityContext{}
+	}
+	switch strings.ToLower(profile) {
+	case "restricted":
+		f := false
+		existing.AllowPrivilegeEscalation = &f
+		existing.Capabilities = &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		}
+		existing.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+		t := true
+		existing.RunAsNonRoot = &t
+	case "baseline":
+		f := false
+		existing.AllowPrivilegeEscalation = &f
+		existing.Capabilities = &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		}
+	}
+	return existing
 }
 
 // MapPort will map a pod port to a local port.
@@ -476,7 +555,7 @@ func (co *Container) GetPreArchiveFiles() map[string][]File {
 
 // HasVolumes will return true if the container has volumes configured.
 func (co *Container) HasVolumes() bool {
-	return len(co.Binds) > 0
+	return len(co.GetVolumeFolders()) > 0 || len(co.GetVolumeFiles()) > 0
 }
 
 // HasPreArchives will return true if the container has pre archives configured.

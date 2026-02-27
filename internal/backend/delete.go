@@ -27,6 +27,10 @@ func (in *instance) DeleteAll() error {
 		klog.Errorf("error deleting pods: %s", err)
 		ok = false
 	}
+	if err := in.DeleteVolumes("kubedock=true"); err != nil {
+		klog.Errorf("error deleting PVCs: %s", err)
+		ok = false
+	}
 	if !ok {
 		return fmt.Errorf("failed deleting all containers")
 	}
