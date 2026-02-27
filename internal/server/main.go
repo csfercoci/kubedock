@@ -142,6 +142,11 @@ func (s *Server) getGinEngine() *gin.Engine {
 
 	icm := viper.GetBool("ignore-container-memory")
 
+	secctx := viper.GetString("kubernetes.security-context")
+	if secctx != "" {
+		klog.Infof("security context profile: %s", secctx)
+	}
+
 	klog.Infof("using namespace: %s", viper.GetString("kubernetes.namespace"))
 
 	cr, err := common.NewContextRouter(s.kub, common.Config{
@@ -158,6 +163,7 @@ func (s *Server) getGinEngine() *gin.Engine {
 		NamePrefix:            podprfx,
 		ActiveDeadlineSeconds: ads,
 		IgnoreContainerMemory: icm,
+		SecurityContext:       secctx,
 	})
 	if err != nil {
 		klog.Errorf("error setting up context: %s", err)

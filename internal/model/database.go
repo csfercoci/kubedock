@@ -109,6 +109,26 @@ func (in *Database) createSchema() (*memdb.MemDB, error) {
 					},
 				},
 			},
+			"volume": {
+				Name: "volume",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:    "id",
+						Unique:  true,
+						Indexer: &memdb.StringFieldIndex{Field: "ID"},
+					},
+					"shortid": {
+						Name:    "shortid",
+						Unique:  true,
+						Indexer: &memdb.StringFieldIndex{Field: "ShortID"},
+					},
+					"name": {
+						Name:    "name",
+						Unique:  true,
+						Indexer: &memdb.StringFieldIndex{Field: "Name"},
+					},
+				},
+			},
 		},
 	}
 	return memdb.NewMemDB(schema)
@@ -431,6 +451,83 @@ func (in *Database) SaveImage(img *types.Image) error {
 // DeleteImage will delete provided image.
 func (in *Database) DeleteImage(img *types.Image) error {
 	return in.delete("image", img)
+}
+
+// GetVolume will return a volume with given id, or an error if the
+// instance does not exist.
+func (in *Database) GetVolume(id string) (*types.Volume, error) {
+	txn := in.db.Txn(false)
+	defer txn.Abort()
+	idx := "id"
+	if stringid.IsShortID(id) {
+		idx = "shortid"
+	}
+	raw, err := txn.First("volume", idx, id)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, fmt.Errorf("volume %s not found", id)
+	}
+	return raw.(*types.Volume), nil
+}
+
+// GetVolumeByName will return a volume with given name, or an error if the
+// instance does not exist.
+func (in *Database) GetVolumeByName(name string) (*types.Volume, error) {
+	txn := in.db.Txn(false)
+	defer txn.Abort()
+	raw, err := txn.First("volume", "name", name)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, fmt.Errorf("volume %s not found", name)
+	}
+	return raw.(*types.Volume), nil
+}
+
+// GetVolumeByNameOrID will return a volume with id/name, or an error if the
+// instance does not exist.
+func (in *Database) GetVolumeByNameOrID(id string) (*types.Volume, error) {
+	vol, err := in.GetVolume(id)
+	if err == nil {
+		return vol, nil
+	}
+	return in.GetVolumeByName(id)
+}
+
+// GetVolumes will return all stored volumes.
+func (in *Database) GetVolumes() ([]*types.Volume, error) {
+	rec := []*types.Volume{}
+	txn := in.db.Txn(false)
+	defer txn.Abort()
+	it, err := txn.Get("volume", "id")
+	if err != nil {
+		return rec, err
+	}
+	for obj := it.Next(); obj != nil; obj = it.Next() {
+		rec = append(rec, obj.(*types.Volume))
+	}
+	return rec, nil
+}
+
+// SaveVolume will either update the given volume, or create a new
+// record. If ID is not provided, it will generate an ID and adds the
+// current time in Created.
+func (in *Database) SaveVolume(vol *types.Volume) error {
+	if vol.ID == "" {
+		id := stringid.GenerateRandomID()
+		vol.ID = id
+		vol.ShortID = stringid.TruncateID(id)
+		vol.Created = time.Now()
+	}
+	return in.save("volume", vol)
+}
+
+// DeleteVolume will delete provided volume.
+func (in *Database) DeleteVolume(vol *types.Volume) error {
+	return in.delete("volume", vol)
 }
 
 // save is a generic save method to store or update a record in the

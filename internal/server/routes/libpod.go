@@ -63,8 +63,26 @@ func RegisterLibpodRoutes(router *gin.Engine, cr *common.ContextRouter) {
 	router.GET("/libpod/images/json", wrap(common.ImageList))
 	router.GET("/libpod/images/:image/*json", wrap(common.ImageJSON))
 
+	router.GET("/libpod/info", wrap(libpod.Info))
+	router.GET("/libpod/events", wrap(libpod.Events))
+
+	router.POST("/libpod/volumes/create", wrap(libpod.VolumeCreate))
+	router.GET("/libpod/volumes/json", wrap(libpod.VolumeList))
+	router.GET("/libpod/volumes/:name/json", wrap(libpod.VolumeInfo))
+	router.GET("/libpod/volumes/:name/exists", wrap(libpod.VolumeExists))
+	router.DELETE("/libpod/volumes/:name", wrap(libpod.VolumeDelete))
+	router.POST("/libpod/volumes/prune", wrap(libpod.VolumePrune))
+
+	router.GET("/libpod/networks/json", wrap(libpod.NetworkList))
+	router.GET("/libpod/networks/:id/json", wrap(libpod.NetworkInfo))
+	router.GET("/libpod/networks/:id/exists", wrap(libpod.NetworkExists))
+	router.POST("/libpod/networks/create", wrap(libpod.NetworkCreate))
+	router.DELETE("/libpod/networks/:id", wrap(libpod.NetworkDelete))
+	router.POST("/libpod/networks/:id/connect", wrap(libpod.NetworkConnect))
+	router.POST("/libpod/networks/:id/disconnect", wrap(libpod.NetworkDisconnect))
+	router.POST("/libpod/networks/prune", wrap(libpod.NetworkPrune))
+
 	// not supported podman api at the moment
-	router.GET("/libpod/info", httputil.NotImplemented)
 	router.POST("/libpod/build", httputil.NotImplemented)
 	router.POST("/libpod/images/load", httputil.NotImplemented)
 }

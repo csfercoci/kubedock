@@ -61,6 +61,9 @@ func ContainerCreate(cr *common.ContextRouter, c *gin.Context) {
 		in.Labels[types.LabelActiveDeadlineSeconds] = fmt.Sprintf("%d", cr.Config.ActiveDeadlineSeconds)
 	}
 	in.Labels[types.LabelServiceAccount] = cr.Config.ServiceAccount
+	if _, ok := in.Labels[types.LabelSecurityContext]; !ok && cr.Config.SecurityContext != "" {
+		in.Labels[types.LabelSecurityContext] = cr.Config.SecurityContext
+	}
 
 	env := []string{}
 	for k, v := range in.Env {

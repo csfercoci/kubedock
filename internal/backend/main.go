@@ -14,6 +14,16 @@ import (
 	"github.com/joyrex2001/kubedock/internal/util/podtemplate"
 )
 
+// GetVolumePVCName returns the PVC name for a volume (exposed for route handlers).
+func (in *instance) GetVolumePVCName(vol *types.Volume) string {
+	return in.getVolumePVCName(vol)
+}
+
+// AddNamedVolumes exposes addNamedVolumes for use in route handlers.
+func (in *instance) AddNamedVolumes(tainr *types.Container, pod *corev1.Pod, namedVolumes map[string]*types.Volume) {
+	in.addNamedVolumes(tainr, pod, namedVolumes)
+}
+
 // Backend is the interface to orchestrate and manage kubernetes objects.
 type Backend interface {
 	StartContainer(*types.Container) (DeployState, error)
@@ -35,6 +45,11 @@ type Backend interface {
 	GetLogs(*types.Container, *LogOptions, chan struct{}, io.Writer) error
 	GetLogsRaw(*types.Container, *LogOptions, chan struct{}, io.Writer) error
 	GetImageExposedPorts(string) (map[string]struct{}, error)
+	CreateVolume(*types.Volume) error
+	DeleteVolume(*types.Volume) error
+	DeleteVolumes(string) error
+	GetVolumePVCName(*types.Volume) string
+	AddNamedVolumes(*types.Container, *corev1.Pod, map[string]*types.Volume)
 }
 
 // instance is the internal representation of the Backend object.
@@ -51,6 +66,9 @@ type instance struct {
 	timeOut           int
 	kuburl            string
 	disableServices   bool
+	storageClass      string
+	volumeSize        string
+	volumeAccessMode  string
 }
 
 // Config is the structure to instantiate a Backend object
@@ -84,6 +102,15 @@ type Config struct {
 	// Disable the creation of services. A networking solution such as kubedock-dns
 	// should be used.
 	DisableServices bool
+	// StorageClass is the kubernetes storage class to use for PVC volumes.
+	// When empty, the cluster default storage class is used.
+	// On OCP 4.18, typical values are "gp3-csi", "ocs-storagecluster-cephfs", etc.
+	StorageClass string
+	// VolumeSize is the requested PVC capacity (e.g. "100Mi", "1Gi").
+	VolumeSize string
+	// VolumeAccessMode is the PVC access mode: "ReadWriteOnce" (default),
+	// "ReadWriteMany", or "ReadOnlyMany".
+	VolumeAccessMode string
 }
 
 // New will return a Backend instance.
@@ -95,6 +122,15 @@ func New(cfg Config) (Backend, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error opening podtemplate: %w", err)
 		}
+	}
+
+	volSize := cfg.VolumeSize
+	if volSize == "" {
+		volSize = "100Mi"
+	}
+	volAccess := cfg.VolumeAccessMode
+	if volAccess == "" {
+		volAccess = "ReadWriteOnce"
 	}
 
 	return &instance{
@@ -110,5 +146,8 @@ func New(cfg Config) (Backend, error) {
 		kuburl:            cfg.KubedockURL,
 		timeOut:           int(cfg.TimeOut.Seconds()),
 		disableServices:   cfg.DisableServices,
+		storageClass:      cfg.StorageClass,
+		volumeSize:        volSize,
+		volumeAccessMode:  volAccess,
 	}, nil
 }

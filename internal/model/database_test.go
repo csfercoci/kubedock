@@ -270,3 +270,53 @@ func TestImage(t *testing.T) {
 	}
 
 }
+
+func TestVolume(t *testing.T) {
+	db, _ := New()
+
+	if _, err := db.GetVolumeByNameOrID("nonexistent"); err == nil {
+		t.Errorf("Expected an error when loading a non-existing volume")
+	}
+
+	vol := &types.Volume{Name: "vol0", Driver: "local"}
+	if err := db.SaveVolume(vol); err != nil {
+		t.Errorf("Unexpected error when creating volume vol0: %s", err)
+	}
+	if vol.ID == "" {
+		t.Errorf("Expected ID when saving a new volume")
+	}
+
+	for i, n := range []string{"vol1", "vol2", "vol3"} {
+		v := &types.Volume{Name: n, ID: fmt.Sprintf("v%d", i+1), ShortID: fmt.Sprintf("v%d", i+1), Driver: "local"}
+		if err := db.SaveVolume(v); err != nil {
+			t.Errorf("Unexpected error when creating volume %s: %s", n, err)
+		}
+	}
+
+	if vols, err := db.GetVolumes(); err != nil {
+		t.Errorf("Unexpected error when loading all existing volumes")
+	} else {
+		if len(vols) != 4 {
+			t.Errorf("Expected 4 volume records, but got %d", len(vols))
+		}
+	}
+
+	vol1, err := db.GetVolumeByNameOrID("vol1")
+	if err != nil {
+		t.Errorf("Unexpected error when loading volume vol1")
+	}
+	if vol1.ID != "v1" {
+		t.Errorf("Invalid id for volume vol1")
+	}
+	vol1, err = db.GetVolumeByNameOrID("v1")
+	if err != nil {
+		t.Errorf("Unexpected error when loading volume vol1: %s", err)
+	}
+	if err := db.DeleteVolume(vol1); err != nil {
+		t.Errorf("Unexpected error when deleting volume vol1: %s", err)
+	}
+	_, err = db.GetVolumeByNameOrID("vol1")
+	if err == nil {
+		t.Errorf("Expected error when loading deleted volume vol1")
+	}
+}

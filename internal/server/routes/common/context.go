@@ -43,6 +43,9 @@ type Config struct {
 	NodeSelector string
 	// IgnoreContainerMemory is used to ignore Docker memory settings and use requests/limits from Kubedock config
 	IgnoreContainerMemory bool
+	// SecurityContext is the security context profile for pods: "restricted" (OCP 4.18),
+	// "baseline", or empty (no extra constraints).
+	SecurityContext string
 }
 
 // ContextRouter is the object that contains shared context for the kubedock API endpoints.
