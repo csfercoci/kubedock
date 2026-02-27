@@ -126,7 +126,7 @@ func New(cfg Config) (Backend, error) {
 
 	volSize := cfg.VolumeSize
 	if volSize == "" {
-		volSize = "100Mi"
+		volSize = "1Gi"
 	}
 	volAccess := cfg.VolumeAccessMode
 	if volAccess == "" {

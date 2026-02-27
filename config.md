@@ -42,6 +42,10 @@ The `server` command is the actual kubedock server, and is the command to start 
 |server|--label||K8S_LABEL_label|label that need to be added to every k8s resource (key=value)|
 |server|--active-deadline-seconds|-1|K8S_ACTIVE_DEADLINE_SECONDS|Default value for pod deadline, in seconds (a negative value means no deadline)|
 |server|--ignore-container-memory|false||Ignore container memory setting and use requests/limits from gobal settings or container labels|
+|server|--storage-class||K8S_STORAGE_CLASS|Kubernetes StorageClass for PVC-backed volumes (empty = cluster default; on OCP use e.g. `gp3-csi`, `thin-csi`, `ocs-storagecluster-cephfs`)|
+|server|--volume-size|1Gi|K8S_VOLUME_SIZE|Default PVC capacity request for named volumes (most OCP/k8s provisioners require a minimum of 1Gi)|
+|server|--volume-access-mode|ReadWriteOnce|K8S_VOLUME_ACCESS_MODE|PVC access mode for named volumes: ReadWriteOnce (RWO), ReadWriteMany (RWX), ReadOnlyMany (ROX)|
+|server|--security-context||K8S_SECURITY_CONTEXT|Security context profile for pods: `restricted` (OCP 4.18 SCC), `baseline`, or empty|
 |dind|--unix-socket|/var/run/docker.sock||Unix socket to listen to|
 |dind|--kubedock-url|||Kubedock url to proxy requests to|
 |dind|--verbosity / -v|1|VERBOSITY|Log verbosity level|

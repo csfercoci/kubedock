@@ -66,7 +66,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("disable-services", false, "Disable service creation (requires a network solution such as kubedock-dns)")
 	serverCmd.PersistentFlags().Bool("ignore-container-memory", false, "Ignore container memory setting and use requests/limits from gobal settings or container labels")
 	serverCmd.PersistentFlags().String("storage-class", "", "Kubernetes storage class for PVC volumes (empty=cluster default, e.g. gp3-csi for OCP)")
-	serverCmd.PersistentFlags().String("volume-size", "100Mi", "Default PVC volume size (e.g. 100Mi, 1Gi)")
+	serverCmd.PersistentFlags().String("volume-size", "1Gi", "Default PVC volume size (e.g. 1Gi, 2Gi); most OCP/k8s storage provisioners require a minimum of 1Gi")
 	serverCmd.PersistentFlags().String("volume-access-mode", "ReadWriteOnce", "PVC access mode: ReadWriteOnce, ReadWriteMany, ReadOnlyMany")
 	serverCmd.PersistentFlags().String("security-context", "", "Security context profile for pods: restricted (OCP 4.18 SCC), baseline, or empty")
 
