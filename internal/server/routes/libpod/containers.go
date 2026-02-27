@@ -60,6 +60,9 @@ func ContainerCreate(cr *common.ContextRouter, c *gin.Context) {
 	if _, ok := in.Labels[types.LabelActiveDeadlineSeconds]; !ok && cr.Config.ActiveDeadlineSeconds >= 0 {
 		in.Labels[types.LabelActiveDeadlineSeconds] = fmt.Sprintf("%d", cr.Config.ActiveDeadlineSeconds)
 	}
+	// NOTE: This unconditionally overwrites any service account label set by the caller.
+	// In OCP, this can break RBAC/SCC if the user intended a custom service account.
+	klog.V(4).Infof("[DEBUG] ContainerCreate (libpod): overwriting service account label with config value=%q (any caller-provided value is lost)", cr.Config.ServiceAccount)
 	in.Labels[types.LabelServiceAccount] = cr.Config.ServiceAccount
 
 	env := []string{}

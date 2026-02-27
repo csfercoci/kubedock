@@ -142,6 +142,8 @@ func ContainerKill(cr *ContextRouter, c *gin.Context) {
 
 	signal := strings.ToLower(c.Query("signal"))
 
+	klog.Infof("[DEBUG] ContainerKill: received raw signal=%q, lowercased=%q", c.Query("signal"), signal)
+
 	valid := map[string]bool{
 		"kil":  true,
 		"term": true,
@@ -150,6 +152,7 @@ func ContainerKill(cr *ContextRouter, c *gin.Context) {
 	}
 
 	if signal != "" && !valid[signal] {
+		klog.Infof("[DEBUG] ContainerKill: signal %q did NOT match valid map keys %v — will be ignored (possible bug: Podman sends full signal names like 'sigkill')", signal, valid)
 		klog.Infof("ignoring signal %s", signal)
 		c.Writer.WriteHeader(http.StatusNoContent)
 		return

@@ -443,8 +443,12 @@ func (in *instance) GetContainerStatus(tainr *types.Container) (DeployState, err
 		if status.RestartCount > 0 {
 			return DeployFailed, fmt.Errorf("failed to start container")
 		}
-		if status.State.Waiting != nil && status.State.Waiting.Reason == "ImagePullBackOff" {
+		if status.State.Waiting != nil && (status.State.Waiting.Reason == "ImagePullBackOff" || status.State.Waiting.Reason == "ErrImagePull") {
+			klog.Infof("[DEBUG] GetContainerStatus: image pull failure detected, reason=%q (note: ErrImagePull is the initial failure before ImagePullBackOff)", status.State.Waiting.Reason)
 			return DeployFailed, fmt.Errorf("failed to start container; error pulling image")
+		}
+		if status.State.Waiting != nil {
+			klog.V(4).Infof("[DEBUG] GetContainerStatus: container waiting with reason=%q", status.State.Waiting.Reason)
 		}
 		if status.State.Running != nil {
 			return DeployRunning, nil
